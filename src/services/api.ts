@@ -1,19 +1,48 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, AxiosError } from 'axios';
+import { Event } from '../types/Event';
 
 const api = axios.create({
-    // Before running your 'json-server', get your computer's IP address and
-    // update your baseURL to `http://your_ip_address_here:3333` and then run:
-    // `npx json-server --watch db.json --port 3333 --host your_ip_address_here`
-    //
-    // To access your server online without running json-server locally,
-    // you can set your baseURL to:
-    // `https://my-json-server.typicode.com/<your-github-username>/<your-github-repo>`
-    //
-    // To use `my-json-server`, make sure your `db.json` is located at the repo root.
-
-    baseURL: 'http://0.0.0.0:3333',
+  baseURL: 'http://192.168.137.68:3333', 
 });
 
+// Authentication function to authenticate a user
 export const authenticateUser = (email: string, password: string): Promise<AxiosResponse> => {
-    return api.post(`/login`, { email, password });
+  return api.post('/login', { email, password });
+};
+
+// Function to fetch events from the server
+export const getEvents = (): Promise<Event[]> => {
+  return api.get('/eventsData').then((response) => response.data);
+};
+
+// Function to create a new event
+export const createEvent = async (eventData: Partial<Event>): Promise<AxiosResponse> => {
+  try {
+    return await api.post('/eventsData', eventData);
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.error('Error creating event:', axiosError.response?.data || axiosError.message);
+    throw axiosError; 
+  }
+};
+
+// Function to upload an image
+export const uploadImage = async (imageUri: string): Promise<AxiosResponse> => {
+  const formData = new FormData();
+  formData.append('image', {
+    uri: imageUri,
+    type: 'image/jpeg',
+    name: 'upload.jpg',
+  } as any);
+
+  try {
+    return await api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.error('Image upload error:', axiosError.response?.data || axiosError.message);
+    console.error('Full error object:', JSON.stringify(axiosError, null, 2));
+    throw axiosError;
+  }
 };
