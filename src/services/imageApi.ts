@@ -1,28 +1,31 @@
 import axios, { AxiosResponse } from 'axios';
-import { getEnvironentVariable } from '../utils';
+import RNFS from 'react-native-fs';
 
-// You can use any hosting service of your preference.
-// In this case, we will use ImgBB API: https://api.imgbb.com/.
-//
-// Sign up for free at https://imgbb.com/signup
-// Get your API key and add it to the .env file in your root folder.
-//
-// To run the app in your local environment, you will need to set the IMGBB_API_KEY
-// when starting the app using:
-// 'IMGBB_API_KEY="insert_your_api_key_here" npx expo start'
-//
-// When creating your app build or publishing, do not forget to run 'eas secret:push' command
-// to import your secret values to EAS.
-
-const imageApi = axios.create({
-    baseURL: 'https://api.imgbb.com/1',
-    headers: { 'Content-Type': 'multipart/form-data' },
-    params: { key: getEnvironentVariable('IMGBB_API_KEY') },
+export const imageApi = axios.create({
+  baseURL: 'https://freeimage.host/api/1',
+  headers: { 'Content-Type': 'multipart/form-data' },
 });
 
-export const uploadImage = (imageBase64: string): Promise<AxiosResponse> => {
-    const data = new FormData();
-    data.append('image', imageBase64);
+export const uploadImage = async (imageUri: string): Promise<AxiosResponse> => {
+  try {
+    const imageBase64 = await RNFS.readFile(imageUri, 'base64');
 
-    return imageApi.post('/upload', data);
+    const formData = new FormData();
+    formData.append('source', `data:image/jpeg;base64,${imageBase64}`); 
+    formData.append('action', 'upload');
+    formData.append('key', '**');
+    formData.append('format', 'json');
+
+    const response = await imageApi.post('/upload', formData);
+
+    if (response.data.status_code === 200) {
+      console.log('Image uploaded successfully:', response.data.image.display_url);
+      return response;
+    } else {
+      throw new Error(`Upload failed: ${response.data.status_txt}`);
+    }
+  } catch (error) {
+    console.error('Image upload error:', (error as any).response?.data || (error as any).message);
+    throw error;
+  }
 };
