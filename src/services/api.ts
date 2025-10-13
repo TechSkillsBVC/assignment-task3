@@ -11,9 +11,53 @@ const api = axios.create({
     //
     // To use `my-json-server`, make sure your `db.json` is located at the repo root.
 
-    baseURL: 'http://0.0.0.0:3333',
+    baseURL: 'http://10.0.0.151:3333',
 });
 
 export const authenticateUser = (email: string, password: string): Promise<AxiosResponse> => {
     return api.post(`/login`, { email, password });
 };
+
+
+
+// same format as db.json
+export type EventDTO = {
+  id: string;
+  name: string;
+  description?: string;
+  dateTime: string; 
+  imageUrl?: string;
+  position: {
+    latitude: number;
+    longitude: number;
+  };
+  volunteersNeeded?: number;
+  volunteersIds?: string[];
+};
+
+// GET /events
+export async function getEvents(): Promise<EventDTO[]> {
+  const res = await api.get<EventDTO[]>('/events');
+  return res.data;
+}
+
+// new event for POST 
+export type NewEventDTO = {
+  name: string;
+  description: string;
+  dateTime: string; 
+  position: { latitude: number; longitude: number };
+  imageUrl: string;
+  organizerId: string;
+  volunteersNeeded: number;
+  volunteersIds: string[];
+};
+
+// POST /events
+export async function createEvent(payload: NewEventDTO): Promise<EventDTO> {
+  const res = await api.post<EventDTO>('/events', payload);
+  return res.data;
+}
+
+
+export default api;
