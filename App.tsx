@@ -1,35 +1,15 @@
-import React from 'react';
-import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+// Application entry. Mounts the stack defined in src/routes.
 
-import {
-    useFonts,
-    Nunito_400Regular,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
-} from '@expo-google-fonts/nunito';
-
-import AppStack from './src/routes/AppStack';
-import { StatusBar } from 'expo-status-bar';
+import React from "react";
+import { StatusBar } from "expo-status-bar";
+import AppRoutes from "./src/routes";
 
 export default function App() {
-    const [fontsLoaded] = useFonts({
-        Nunito_400Regular,
-        Nunito_600SemiBold,
-        Nunito_700Bold,
-        Nunito_800ExtraBold,
-    });
-
-    if (!fontsLoaded) {
-        return null;
-    } else {
-        return (
-            <>
-                <StatusBar animated translucent style="dark" />
-                <ActionSheetProvider>
-                    <AppStack />
-                </ActionSheetProvider>
-            </>
-        );
-    }
+    const Routes = AppRoutes();
+    return (
+        <>
+            {Routes.element}
+            <StatusBar style="auto" />
+        </>
+    );
 }

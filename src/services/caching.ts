@@ -1,21 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { EventsResponse } from "../types";
 
-export const getFromNetworkFirst = async <T>(key: string, request: Promise<T>): Promise<T> => {
-    try {
-        const response = await request;
-        setInCache(key, response);
-        return response;
-    } catch (e) {
-        return getFromCache<T>(key);
-    }
-};
+const KEY = "events-cache-v1";
 
-export const setInCache = (key: string, value: any) => {
-    const jsonValue = JSON.stringify(value);
-    return AsyncStorage.setItem(key, jsonValue);
-};
+export async function saveEventsToCache(events: EventsResponse): Promise<void> {
+    await AsyncStorage.setItem(KEY, JSON.stringify(events));
+}
 
-export const getFromCache = async <T>(key: string): Promise<T> => {
-    const json = await AsyncStorage.getItem(key);
-    return await (json != null ? Promise.resolve(JSON.parse(json)) : Promise.reject(`Key "${key}" not in cache`));
-};
+export async function loadEventsFromCache(): Promise<EventsResponse | null> {
+    const raw = await AsyncStorage.getItem(KEY);
+    return raw ? (JSON.parse(raw) as EventsResponse) : null;
+}

@@ -1,28 +1,35 @@
-import axios, { AxiosResponse } from 'axios';
-import { getEnvironentVariable } from '../utils';
+// Image upload utility.
+// Uses ImgBB (https://api.imgbb.com/1/upload).
+// Provide IMGBB_API_KEY at runtime; npx expo start
 
-// You can use any hosting service of your preference.
-// In this case, we will use ImgBB API: https://api.imgbb.com/.
-//
-// Sign up for free at https://imgbb.com/signup
-// Get your API key and add it to the .env file in your root folder.
-//
-// To run the app in your local environment, you will need to set the IMGBB_API_KEY
-// when starting the app using:
-// 'IMGBB_API_KEY="insert_your_api_key_here" npx expo start'
-//
-// When creating your app build or publishing, do not forget to run 'eas secret:push' command
-// to import your secret values to EAS.
+import * as FileSystem from "expo-file-system";
 
-const imageApi = axios.create({
-    baseURL: 'https://api.imgbb.com/1',
-    headers: { 'Content-Type': 'multipart/form-data' },
-    params: { key: getEnvironentVariable('IMGBB_API_KEY') },
-});
-
-export const uploadImage = (imageBase64: string): Promise<AxiosResponse> => {
-    const data = new FormData();
-    data.append('image', imageBase64);
-
-    return imageApi.post('/upload', data);
+type UploadResult = {
+    imageUrl: string;
+    fileName: string;
+    fileSize: number;
 };
+
+const IMGBB_ENDPOINT = "https://api.imgbb.com/1/upload";
+
+export async function uploadImageAsync(localUri: string, apiKey: string): Promise<UploadResult> {
+    const info = await FileSystem.getInfoAsync(localUri);
+    const fileName = localUri.split("/").pop() ?? "image.jpg";
+    const fileSize = info.size ?? 0;
+
+    const form = new FormData();
+    form.append("key", apiKey);
+    form.append("image", {
+        // @ts-ignore RN FormData typing
+        uri: localUri,
+        name: fileName,
+        type: "image/jpeg",
+    });
+
+    const res = await fetch(IMGBB_ENDPOINT, { method: "POST", body: form as any });
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    const json = await res.json();
+    const imageUrl = json?.data?.url as string;
+    if (!imageUrl) throw new Error("Upload failed: no URL returned");
+    return { imageUrl, fileName, fileSize };
+}

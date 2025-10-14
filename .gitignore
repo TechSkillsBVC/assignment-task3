@@ -14,3 +14,15 @@ web-build/
 
 # environment variables
 .env
+
+# Ignore Visual Studio folders
+.vs/
+*.user
+*.suo
+*.db
+*.cache
+
+# Ignore build artifacts
+node_modules/
+dist/
+build/
