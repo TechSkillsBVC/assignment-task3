@@ -1,35 +1,18 @@
-import React from 'react';
-import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+import React from "react";
+import { createStackNavigator } from "@react-navigation/stack";
+import { NavigationContainer } from "@react-navigation/native";
+import EventsMap from "./src/pages/EventsMap";
+import CreateEvent from "./src/pages/CreateEvent";
 
-import {
-    useFonts,
-    Nunito_400Regular,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
-} from '@expo-google-fonts/nunito';
+const { Navigator, Screen } = createStackNavigator();
 
-import AppStack from './src/routes/AppStack';
-import { StatusBar } from 'expo-status-bar';
-
-export default function App() {
-    const [fontsLoaded] = useFonts({
-        Nunito_400Regular,
-        Nunito_600SemiBold,
-        Nunito_700Bold,
-        Nunito_800ExtraBold,
-    });
-
-    if (!fontsLoaded) {
-        return null;
-    } else {
-        return (
-            <>
-                <StatusBar animated translucent style="dark" />
-                <ActionSheetProvider>
-                    <AppStack />
-                </ActionSheetProvider>
-            </>
-        );
-    }
+export default function AppStack() {
+  return (
+    <NavigationContainer>
+      <Navigator screenOptions={{ headerShown: false }}>
+        <Screen name="EventsMap" component={EventsMap} />
+        <Screen name="CreateEvent" component={CreateEvent} />
+      </Navigator>
+    </NavigationContainer>
+  );
 }
