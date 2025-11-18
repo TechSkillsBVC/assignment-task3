@@ -14,3 +14,6 @@ web-build/
 
 # environment variables
 .env
+
+# API Keys - DO NOT COMMIT
+src/config/keys.ts
