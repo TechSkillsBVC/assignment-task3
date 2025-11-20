@@ -1,0 +1,47 @@
+name: Deploy Volunteam App
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: "main"
+      channel:
+        description: "EAS Update channel"
+        required: true
+        default: "production"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set up Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.4
+          cache: "npm"
+
+      - name: Install dependencies (force + upgrade types)
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --force
+          npm install @types/react@19.1.10 @types/react-dom@19.1.7 --force
+          echo "✅ Dependencies installed with forced resolution"
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Publish to Expo via EAS Update
+        run: |
+          export CI=1
+          npx eas update --channel production --platform ios,android --message "Deploy from branch feature/manage-data-flows"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Finished
+        run: echo "✅ Volunteam App deployed successfully from branch '${{ github.event.inputs.branch }}' to channel '${{ github.event.inputs.channel }}'."

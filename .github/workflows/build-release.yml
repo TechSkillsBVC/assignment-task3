@@ -1,0 +1,169 @@
+name: Build and Release Volunteam App
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build from"
+        required: true
+        default: "main"
+      version:
+        description: "Release version (e.g., v1.0.0)"
+        required: true
+        default: "v1.0.0"
+      platform:
+        description: "Platform to build"
+        required: true
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+        default: "android"
+      profile:
+        description: "Build profile"
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: "preview"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.4
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          npm install --force
+          echo "Dependencies installed"
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build app with EAS
+        id: build
+        run: |
+          echo "Starting EAS build for ${{ github.event.inputs.platform }}..."
+
+          # Run build and wait (this will take 10-20 minutes)
+          eas build \
+            --platform ${{ github.event.inputs.platform }} \
+            --profile ${{ github.event.inputs.profile }} \
+            --non-interactive \
+            --wait \
+            --json > build_result.json
+
+          # Extract build info from the result
+          BUILD_ID=$(cat build_result.json | jq -r '.[0].id')
+          DOWNLOAD_URL=$(cat build_result.json | jq -r '.[0].artifacts.buildUrl')
+
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+
+          echo "✅ Build completed!"
+          echo "Build ID: $BUILD_ID"
+          echo "Download URL: $DOWNLOAD_URL"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Create GitHub Release
+        if: success() && steps.build.outputs.download_url != 'null'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: "Volunteam App ${{ github.event.inputs.version }}"
+          body: |
+            ## Volunteam App Release
+
+            **Branch:** `${{ github.event.inputs.branch }}`
+            **Platform:** `${{ github.event.inputs.platform }}`
+            **Build Profile:** `${{ github.event.inputs.profile }}`
+            **Build ID:** `${{ steps.build.outputs.build_id }}`
+
+            ### Download the App
+
+            **Direct Download Link (EAS):**
+            ${{ steps.build.outputs.download_url }}
+
+            ### Installation Instructions
+
+            #### Android (APK):
+            1. Click the download link above
+            2. Download the `.apk` file to your Android device
+            3. Enable "Install from Unknown Sources" in Settings → Security
+            4. Open the APK file and tap "Install"
+
+            #### iOS (IPA):
+            1. Requires TestFlight or enterprise distribution profile
+            2. Contact the administrator for installation instructions
+
+            ### What's New
+
+            - Built from branch `${{ github.event.inputs.branch }}`
+            - Commit: `${{ github.sha }}`
+            - All features and fixes up to this commit are included
+
+            ---
+
+            ### Assignment Submission Links
+
+            **GitHub Release Page:** https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version }}
+
+            **Build Download URL:** ${{ steps.build.outputs.download_url }}
+
+            ---
+
+            Built with using [Expo EAS Build](https://expo.dev/)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Summary
+        if: success()
+        run: |
+          echo "## Build and Release Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build ID:** \`${{ steps.build.outputs.build_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform:** ${{ github.event.inputs.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Profile:** ${{ github.event.inputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Assignment Submission Links" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**GitHub Release Page:**" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Download URL:**" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.build.outputs.download_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Copy both links above for your assignment submission!"
+
+      - name: Build Failed
+        if: failure()
+        run: |
+          echo "## Build Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The EAS build encountered an error. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Common issues:" >> $GITHUB_STEP_SUMMARY
+          echo "- Missing or invalid \`app.json\` configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Invalid \`eas.json\` build profiles" >> $GITHUB_STEP_SUMMARY
+          echo "- Missing EXPO_TOKEN secret" >> $GITHUB_STEP_SUMMARY
+          echo "- Platform-specific configuration errors" >> $GITHUB_STEP_SUMMARY

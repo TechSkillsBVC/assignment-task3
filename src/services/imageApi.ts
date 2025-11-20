@@ -1,5 +1,5 @@
-import axios, { AxiosResponse } from 'axios';
-import { getEnvironentVariable } from '../utils';
+import axios, { AxiosResponse } from "axios";
+import { getEnvironentVariable } from "../utils";
 
 // You can use any hosting service of your preference.
 // In this case, we will use ImgBB API: https://api.imgbb.com/.
@@ -13,16 +13,32 @@ import { getEnvironentVariable } from '../utils';
 //
 // When creating your app build or publishing, do not forget to run 'eas secret:push' command
 // to import your secret values to EAS.
-
 const imageApi = axios.create({
-    baseURL: 'https://api.imgbb.com/1',
-    headers: { 'Content-Type': 'multipart/form-data' },
-    params: { key: getEnvironentVariable('IMGBB_API_KEY') },
+  baseURL: "https://api.imgbb.com/1",
+  headers: { "Content-Type": "multipart/form-data" },
+  params: { key: getEnvironentVariable("IMGBB_API_KEY") },
 });
 
-export const uploadImage = (imageBase64: string): Promise<AxiosResponse> => {
-    const data = new FormData();
-    data.append('image', imageBase64);
+export const uploadImage = async (
+  base64String: string
+): Promise<{
+  url: string;
+  size: number;
+  name: string;
+}> => {
+  const form = new FormData();
+  form.append("image", base64String);
 
-    return imageApi.post('/upload', data);
+  const response: AxiosResponse = await imageApi.post("/upload", form);
+  const json = response.data;
+
+  if (!json?.data?.url) {
+    throw new Error("UPLOAD_FAILED");
+  }
+
+  return {
+    url: json.data.url as string,
+    size: Number(json.data.size),
+    name: json.data.image?.filename || "photo.jpg",
+  };
 };
