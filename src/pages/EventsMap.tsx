@@ -1,7 +1,9 @@
+
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackScreenProps } from '@react-navigation/stack';
-import React, { useContext, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -9,13 +11,47 @@ import customMapStyle from '../../map-style.json';
 import * as MapSettings from '../constants/MapSettings';
 import { AuthenticationContext } from '../context/AuthenticationContext';
 import mapMarkerImg from '../images/map-marker.png';
+import { getEvents } from '../services/api';
 
 export default function EventsMap(props: StackScreenProps<any>) {
     const { navigation } = props;
     const authenticationContext = useContext(AuthenticationContext);
     const mapViewRef = useRef<MapView>(null);
+    const [events, setEvents] = useState<event[]>([]);
 
-    const handleNavigateToCreateEvent = () => {};
+    useFocusEffect(
+        useCallback(() => {
+            getEvents().then((response) => {
+                const futureEvents = response.data.filter(
+                    (event: event) => new Date(event.dateTime) > new Date()
+                );
+                setEvents(futureEvents);
+                AsyncStorage.setItem('events', JSON.stringify(futureEvents));
+            }).catch(() => {
+                AsyncStorage.getItem('events').then((data) => {
+                    if (data) {
+                        setEvents(JSON.parse(data));
+                    }
+                });
+            });
+        }, [])
+    );
+
+    useEffect(() => {
+        if (events.length > 0) {
+            mapViewRef.current?.fitToCoordinates(
+                events.map(({ position }) => ({
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                })),
+                { edgePadding: MapSettings.EDGE_PADDING }
+            );
+        }
+    }, [events]);
+
+    const handleNavigateToCreateEvent = () => {
+        navigation.navigate('EventLocation');
+    };
 
     const handleNavigateToEventDetails = () => {};
 
@@ -40,15 +76,6 @@ export default function EventsMap(props: StackScreenProps<any>) {
                 toolbarEnabled={false}
                 moveOnMarkerPress={false}
                 mapPadding={MapSettings.EDGE_PADDING}
-                onLayout={() =>
-                    mapViewRef.current?.fitToCoordinates(
-                        events.map(({ position }) => ({
-                            latitude: position.latitude,
-                            longitude: position.longitude,
-                        })),
-                        { edgePadding: MapSettings.EDGE_PADDING }
-                    )
-                }
             >
                 {events.map((event) => {
                     return (
@@ -67,7 +94,7 @@ export default function EventsMap(props: StackScreenProps<any>) {
             </MapView>
 
             <View style={styles.footer}>
-                <Text style={styles.footerText}>X event(s) found</Text>
+                <Text style={styles.footerText}>{events.length} event(s) found</Text>
                 <RectButton
                     style={[styles.smallButton, { backgroundColor: '#00A3FF' }]}
                     onPress={handleNavigateToCreateEvent}
@@ -140,39 +167,9 @@ const styles = StyleSheet.create({
 
 interface event {
     id: string;
+    dateTime: string;
     position: {
         latitude: number;
         longitude: number;
     };
 }
-
-const events: event[] = [
-    {
-        id: 'e3c95682-870f-4080-a0d7-ae8e23e2534f',
-        position: {
-            latitude: 51.105761,
-            longitude: -114.106943,
-        },
-    },
-    {
-        id: '98301b22-2b76-44f1-a8da-8c86c56b0367',
-        position: {
-            latitude: 51.04112,
-            longitude: -114.069325,
-        },
-    },
-    {
-        id: 'd7b8ea73-ba2c-4fc3-9348-9814076124bd',
-        position: {
-            latitude: 51.01222958257112,
-            longitude: -114.11677222698927,
-        },
-    },
-    {
-        id: 'd1a6b9ea-877d-4711-b8d7-af8f1bce4d29',
-        position: {
-            latitude: 51.010801915407036,
-            longitude: -114.07823592424393,
-        },
-    },
-];
