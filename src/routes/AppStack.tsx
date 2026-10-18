@@ -7,6 +7,8 @@ const { Navigator, Screen } = createStackNavigator();
 
 import Login from '../pages/Login';
 import EventsMap from '../pages/EventsMap';
+import CreateEventLocation from '../pages/CreateEventLocation';
+import CreateEventForm from '../pages/CreateEventForm';
 import { AuthenticationContext, AuthenticationContextObject } from '../context/AuthenticationContext';
 import { User } from '../types/User';
 
@@ -30,6 +32,10 @@ export default function Routes() {
                     <Screen name="Login" component={Login} />
 
                     <Screen name="EventsMap" component={EventsMap} />
+
+                    <Screen name="CreateEventLocation" component={CreateEventLocation} />
+
+                    <Screen name="CreateEventForm" component={CreateEventForm} />
                 </Navigator>
             </NavigationContainer>
         </AuthenticationContext.Provider>
