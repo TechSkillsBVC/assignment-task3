@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const getFromNetworkFirst = async <T>(key: string, request: Promise<T>): Promise<T> => {
     try {
         const response = await request;
-        setInCache(key, response);
+        await setInCache(key, response);
         return response;
     } catch (e) {
         return getFromCache<T>(key);
