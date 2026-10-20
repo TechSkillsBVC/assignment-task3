@@ -5,9 +5,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 const { Navigator, Screen } = createStackNavigator();
 
-import Login from '../pages/Login';
-import EventsMap from '../pages/EventsMap';
 import { AuthenticationContext, AuthenticationContextObject } from '../context/AuthenticationContext';
+import CreateEvent from '../pages/CreateEvent';
+import EventsMap from '../pages/EventsMap';
+import Login from '../pages/Login';
+import SelectMapPosition from '../pages/SelectMapPosition';
 import { User } from '../types/User';
 
 export default function Routes() {
@@ -30,6 +32,10 @@ export default function Routes() {
                     <Screen name="Login" component={Login} />
 
                     <Screen name="EventsMap" component={EventsMap} />
+
+                    <Screen name="SelectMapPosition" component={SelectMapPosition} />
+
+                    <Screen name="CreateEvent" component={CreateEvent} />
                 </Navigator>
             </NavigationContainer>
         </AuthenticationContext.Provider>

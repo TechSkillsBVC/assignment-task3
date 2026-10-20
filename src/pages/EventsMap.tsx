@@ -1,21 +1,73 @@
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
-import React, { useContext, useRef } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
+import Spinner from 'react-native-loading-spinner-overlay';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import customMapStyle from '../../map-style.json';
+import { Colors } from '../constants/Colors';
 import * as MapSettings from '../constants/MapSettings';
 import { AuthenticationContext } from '../context/AuthenticationContext';
 import mapMarkerImg from '../images/map-marker.png';
+import * as api from '../services/api';
+import { getFromNetworkFirst } from '../services/caching';
+import { Event } from '../types/Event';
+import { getFutureEvents } from '../utils/events';
 
 export default function EventsMap(props: StackScreenProps<any>) {
     const { navigation } = props;
     const authenticationContext = useContext(AuthenticationContext);
     const mapViewRef = useRef<MapView>(null);
 
-    const handleNavigateToCreateEvent = () => {};
+    const [events, setEvents] = useState<Event[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+
+    // Only events that have not happened yet are placed on the map.
+    const futureEvents = useMemo(() => getFutureEvents(events), [events]);
+
+    /**
+     * Network first: the events endpoint is the source of truth and every successful
+     * response is written to Async Storage. When the request fails the cached copy is
+     * used instead, so the map still works offline.
+     */
+    const loadEvents = useCallback(async () => {
+        try {
+            setEvents(await getFromNetworkFirst<Event[]>('events', api.getEvents()));
+        } catch (error) {
+            console.warn('No events available from the API or from the cache.', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // Runs when the screen first opens and again every time the user comes back to it,
+    // so an event created in the meantime shows up straight away.
+    useFocusEffect(
+        useCallback(() => {
+            loadEvents();
+        }, [loadEvents])
+    );
+
+    const fitMapToEvents = useCallback(() => {
+        if (!futureEvents.length) return;
+
+        mapViewRef.current?.fitToCoordinates(
+            futureEvents.map(({ position }) => position),
+            { edgePadding: MapSettings.EDGE_PADDING }
+        );
+    }, [futureEvents]);
+
+    // Re-frame the map whenever the set of events changes.
+    useEffect(() => {
+        fitMapToEvents();
+    }, [fitMapToEvents]);
+
+    const handleNavigateToCreateEvent = () => {
+        navigation.navigate('SelectMapPosition');
+    };
 
     const handleNavigateToEventDetails = () => {};
 
@@ -40,47 +92,38 @@ export default function EventsMap(props: StackScreenProps<any>) {
                 toolbarEnabled={false}
                 moveOnMarkerPress={false}
                 mapPadding={MapSettings.EDGE_PADDING}
-                onLayout={() =>
-                    mapViewRef.current?.fitToCoordinates(
-                        events.map(({ position }) => ({
-                            latitude: position.latitude,
-                            longitude: position.longitude,
-                        })),
-                        { edgePadding: MapSettings.EDGE_PADDING }
-                    )
-                }
+                onLayout={fitMapToEvents}
             >
-                {events.map((event) => {
-                    return (
-                        <Marker
-                            key={event.id}
-                            coordinate={{
-                                latitude: event.position.latitude,
-                                longitude: event.position.longitude,
-                            }}
-                            onPress={handleNavigateToEventDetails}
-                        >
-                            <Image resizeMode="contain" style={{ width: 48, height: 54 }} source={mapMarkerImg} />
-                        </Marker>
-                    );
-                })}
+                {futureEvents.map((event) => (
+                    <Marker key={event.id} coordinate={event.position} onPress={handleNavigateToEventDetails}>
+                        <Image resizeMode="contain" style={styles.marker} source={mapMarkerImg} />
+                    </Marker>
+                ))}
             </MapView>
 
             <View style={styles.footer}>
-                <Text style={styles.footerText}>X event(s) found</Text>
+                <Text style={styles.footerText}>{futureEvents.length} event(s) found</Text>
                 <RectButton
-                    style={[styles.smallButton, { backgroundColor: '#00A3FF' }]}
+                    style={[styles.smallButton, { backgroundColor: Colors.primary }]}
                     onPress={handleNavigateToCreateEvent}
                 >
                     <Feather name="plus" size={20} color="#FFF" />
                 </RectButton>
             </View>
+
             <RectButton
-                style={[styles.logoutButton, styles.smallButton, { backgroundColor: '#4D6F80' }]}
+                style={[styles.logoutButton, styles.smallButton, { backgroundColor: Colors.slate }]}
                 onPress={handleLogout}
             >
                 <Feather name="log-out" size={20} color="#FFF" />
             </RectButton>
+
+            <Spinner
+                visible={isLoading}
+                textContent="Loading events..."
+                overlayColor="#031A62BF"
+                textStyle={styles.spinnerText}
+            />
         </View>
     );
 }
@@ -95,6 +138,11 @@ const styles = StyleSheet.create({
 
     mapStyle: {
         ...StyleSheet.absoluteFillObject,
+    },
+
+    marker: {
+        width: 48,
+        height: 54,
     },
 
     logoutButton: {
@@ -125,7 +173,7 @@ const styles = StyleSheet.create({
 
     footerText: {
         fontFamily: 'Nunito_700Bold',
-        color: '#8fa7b3',
+        color: Colors.muted,
     },
 
     smallButton: {
@@ -136,43 +184,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+
+    spinnerText: {
+        fontSize: 16,
+        fontFamily: 'Nunito_700Bold',
+        color: '#fff',
+    },
 });
-
-interface event {
-    id: string;
-    position: {
-        latitude: number;
-        longitude: number;
-    };
-}
-
-const events: event[] = [
-    {
-        id: 'e3c95682-870f-4080-a0d7-ae8e23e2534f',
-        position: {
-            latitude: 51.105761,
-            longitude: -114.106943,
-        },
-    },
-    {
-        id: '98301b22-2b76-44f1-a8da-8c86c56b0367',
-        position: {
-            latitude: 51.04112,
-            longitude: -114.069325,
-        },
-    },
-    {
-        id: 'd7b8ea73-ba2c-4fc3-9348-9814076124bd',
-        position: {
-            latitude: 51.01222958257112,
-            longitude: -114.11677222698927,
-        },
-    },
-    {
-        id: 'd1a6b9ea-877d-4711-b8d7-af8f1bce4d29',
-        position: {
-            latitude: 51.010801915407036,
-            longitude: -114.07823592424393,
-        },
-    },
-];
