@@ -1,4 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
+import { getEnvironentVariable } from '../utils';
+import { Event, NewEvent } from '../types/Event';
 
 const api = axios.create({
     // Before running your 'json-server', get your computer's IP address and
@@ -11,9 +13,14 @@ const api = axios.create({
     //
     // To use `my-json-server`, make sure your `db.json` is located at the repo root.
 
-    baseURL: 'http://0.0.0.0:3333',
+    baseURL: getEnvironentVariable('API_URL') || 'http://localhost:3333',
+    timeout: 8000,
 });
 
 export const authenticateUser = (email: string, password: string): Promise<AxiosResponse> => {
     return api.post(`/login`, { email, password });
 };
+
+export const getEvents = (): Promise<AxiosResponse<Event[]>> => api.get('/events');
+
+export const createEvent = (event: NewEvent): Promise<AxiosResponse<Event>> => api.post('/events', event);

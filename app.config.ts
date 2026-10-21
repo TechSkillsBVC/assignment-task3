@@ -1,6 +1,9 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+export default ({ config }: ConfigContext): ExpoConfig => {
+    const env = process.env as Record<string, string | undefined>;
+
+    return {
     ...config,
     name: 'volunteam',
     slug: 'volunteam',
@@ -35,6 +38,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         eas: {
             projectId: '954f3b8e-1155-4f8f-8601-a2b3126da39e',
         },
-        IMGBB_API_KEY: process.env.IMGBB_API_KEY,
+        IMGBB_API_KEY: env.IMGBB_API_KEY,
+        API_URL: env.API_URL || env.EXPO_PUBLIC_API_URL,
     },
-});
+    };
+};

@@ -1,38 +1,55 @@
-# Volunteam App
+# Volunteam App - Project 1.3
 
-## Setting up the fake API (json-server)
+For this project I added the create event pages and connected the events to the API.
 
-Update the file `src/services/api.ts`.
+## What I added
 
-Before running your 'json-server', get your computer's IP address and update your baseURL to `http://your_ip_address_here:3333` and then run:
+- Events load from the API and show on the map.
+- Past events are not shown.
+- The map shows the user's location and the available events.
+- A user can choose a location and fill out the form to create an event.
+- The form checks that all fields are filled in.
+- A photo can be selected from the camera or photo library and uploaded with ImgBB.
+- New events are saved to the API and then shown on the map.
+- Saved events can still be shown if the API is temporarily unavailable.
 
-```
-npx json-server --watch db.json --port 3333 --host your_ip_address_here -m ./node_modules/json-server-auth
-```
+## How to run the project
 
-To access your server online without running json-server locally, you can set your baseURL to:
+Install the packages:
 
-```
-https://my-json-server.typicode.com/<your-github-username>/<your-github-repo>
-```
-
-To use `my-json-server`, make sure your `db.json` is located at the repo root.
-
-## Setting up the image upload API
-
-Update the file `src/services/imageApi.ts`.
-
-You can use any hosting service of your preference. In this case, we will use ImgBB API: https://api.imgbb.com/.
-Sign up for free at https://imgbb.com/signup, get your API key and add it to the .env file in your root folder.
-
-To run the app in your local environment, you will need to set the IMGBB_API_KEY when starting the app using:
-
-```
-IMGBB_API_KEY="insert_your_api_key_here" npx expo start
+```bash
+npm install --legacy-peer-deps
 ```
 
-When creating your app build or publishing, import your secret values to EAS running:
+Create a `.env` file using `.env.example`. Add your computer's IP address and your ImgBB key:
 
+```text
+API_URL=http://YOUR_COMPUTER_IP:3333
+IMGBB_API_KEY=YOUR_IMGBB_API_KEY
 ```
-eas secret:push
+
+Run the API in one terminal:
+
+```bash
+npm run api
+```
+
+Then run Expo in another PowerShell terminal:
+
+```powershell
+$env:API_URL="http://YOUR_COMPUTER_IP:3333"
+$env:IMGBB_API_KEY="YOUR_IMGBB_API_KEY"
+npx expo start --lan --clear
+```
+
+## Login
+
+- Email: `luigi@carluccio.it`
+- Password: `password`
+
+## Testing
+
+```bash
+npm run typecheck
+npm test
 ```
