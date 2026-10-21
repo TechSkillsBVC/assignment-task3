@@ -1,28 +1,43 @@
-import axios, { AxiosResponse } from 'axios';
-import { getEnvironentVariable } from '../utils';
+import axios from 'axios';
+import Constants from 'expo-constants';
 
-// You can use any hosting service of your preference.
-// In this case, we will use ImgBB API: https://api.imgbb.com/.
-//
-// Sign up for free at https://imgbb.com/signup
-// Get your API key and add it to the .env file in your root folder.
-//
-// To run the app in your local environment, you will need to set the IMGBB_API_KEY
-// when starting the app using:
-// 'IMGBB_API_KEY="insert_your_api_key_here" npx expo start'
-//
-// When creating your app build or publishing, do not forget to run 'eas secret:push' command
-// to import your secret values to EAS.
+/**
+ * Uploads a base64 encoded image to ImgBB or FreeImage.host and resolves with the public URL.
+ * Checks for IMGBB_API_KEY or FREEIMAGE_API_KEY in Expo config or environment variables.
+ */
+export const uploadImage = async (imageBase64: string): Promise<string> => {
+    const imgbbKey = Constants.expoConfig?.extra?.IMGBB_API_KEY || process.env.IMGBB_API_KEY;
+    const freeimageKey = Constants.expoConfig?.extra?.FREEIMAGE_API_KEY || process.env.FREEIMAGE_API_KEY;
 
-const imageApi = axios.create({
-    baseURL: 'https://api.imgbb.com/1',
-    headers: { 'Content-Type': 'multipart/form-data' },
-    params: { key: getEnvironentVariable('IMGBB_API_KEY') },
-});
+    if (imgbbKey) {
+        const formData = new FormData();
+        formData.append('image', imageBase64);
 
-export const uploadImage = (imageBase64: string): Promise<AxiosResponse> => {
-    const data = new FormData();
-    data.append('image', imageBase64);
+        const response = await axios.post('https://api.imgbb.com/1/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            params: { key: imgbbKey },
+        });
 
-    return imageApi.post('/upload', data);
+        if (response.data?.data?.url) {
+            return response.data.data.url;
+        }
+    }
+
+    if (freeimageKey) {
+        const formData = new FormData();
+        formData.append('key', freeimageKey);
+        formData.append('action', 'upload');
+        formData.append('format', 'json');
+        formData.append('source', imageBase64);
+
+        const response = await axios.post('https://freeimage.host/api/1/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        if (response.data?.image?.url) {
+            return response.data.image.url;
+        }
+    }
+
+    throw new Error('Image API key not found. Please set IMGBB_API_KEY in your .env file or environment.');
 };
