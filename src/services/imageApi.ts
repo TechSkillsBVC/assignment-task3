@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { getEnvironentVariable } from '../utils';
+import Constants from 'expo-constants';
 
 // You can use any hosting service of your preference.
 // In this case, we will use ImgBB API: https://api.imgbb.com/.
@@ -13,12 +14,16 @@ import { getEnvironentVariable } from '../utils';
 //
 // When creating your app build or publishing, do not forget to run 'eas secret:push' command
 // to import your secret values to EAS.
-
+console.log(
+    'ImgBB API key loaded:',
+    Boolean(getEnvironentVariable('IMGBB_API_KEY'))
+);
 const imageApi = axios.create({
     baseURL: 'https://api.imgbb.com/1',
     headers: { 'Content-Type': 'multipart/form-data' },
     params: { key: getEnvironentVariable('IMGBB_API_KEY') },
 });
+console.log('EXPO CONFIG:', Constants.expoConfig?.extra ? 'EXTRA EXISTS' : 'EXTRA MISSING');
 
 export const uploadImage = (imageBase64: string): Promise<AxiosResponse> => {
     const data = new FormData();
